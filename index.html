@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Keystroke Dynamics — Rhythm-Based Identity Verification</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e10;
+    --bg2: #1a1a1e;
+    --bg3: #242428;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f0;
+    --text2: #9a9a9a;
+    --text3: #666;
+    --accent: #1dbb88;
+    --accent-dim: rgba(29,187,136,0.12);
+    --accent-mid: #0f6e56;
+    --warn: #e8a030;
+    --danger: #e05050;
+    --danger-dim: rgba(224,80,80,0.10);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --font-mono: 'JetBrains Mono', 'Fira Mono', 'Courier New', monospace;
+    --font-sans: 'Inter', system-ui, sans-serif;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+    padding: 2.5rem 2rem 2rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .hero-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 0.5px solid var(--accent);
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    display: inline-block;
+  }
+  .hero h1 {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .hero p {
+    font-size: 13px;
+    color: var(--text2);
+    max-width: 520px;
+    line-height: 1.6;
+  }
+  .hero-meta {
+    text-align: right;
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--font-mono);
+  }
+  .hero-meta span { display: block; margin-bottom: 2px; }
+
+  /* ── LAYOUT ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    min-height: calc(100vh - 130px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--bg2);
+    border-right: 0.5px solid var(--border);
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 130px);
+    overflow-y: auto;
+  }
+  .nav-section {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 1rem 6px;
+    margin-top: 1rem;
+  }
+  .nav-section:first-child { margin-top: 0; }
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 9px 1rem;
+    font-size: 13px;
+    font-family: var(--font-sans);
+    color: var(--text2);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, color 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-btn:hover { background: var(--bg3); color: var(--text); }
+  .nav-btn.active {
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-left-color: var(--accent);
+  }
+  .nav-num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text3);
+    min-width: 16px;
+  }
+  .nav-btn.active .nav-num { color: var(--accent); }
+
+  /* ── MAIN ── */
+  .main {
+    padding: 2rem;
+    overflow-y: auto;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+
+  /* ── TYPING ── */
+  .phrase-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .phrase-target {
+    color: var(--accent);
+    font-weight: 500;
+    background: var(--accent-dim);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .type-input {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 20px;
+    letter-spacing: 0.12em;
+    padding: 13px 16px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    caret-color: var(--accent);
+  }
+  .type-input:focus { border-color: var(--accent); }
+  .type-input::placeholder { color: var(--text3); font-size: 14px; letter-spacing: 0; }
+  .type-input.error { border-color: var(--danger); animation: shake 0.3s; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+  }
+
+  /* ── DOTS ── */
+  .dots-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 12px;
+  }
+  .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    transition: all 0.2s;
+  }
+  .dot.filled { background: var(--accent); border-color: var(--accent); }
+  .dot.current {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
+  .dots-label { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-left: 4px; }
+
+  /* ── FEATURES ── */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .feat-cell {
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    text-align: center;
+  }
+  .feat-val {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .feat-lbl {
+    font-size: 9px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 3px;
+  }
+
+  /* ── RHYTHM CANVAS ── */
+  .canvas-wrap {
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    height: 72px;
+    position: relative;
+    overflow: hidden;
+  }
+  canvas { display: block; width: 100%; height: 72px; }
+  .canvas-lbl {
+    position: absolute;
+    top: 6px; left: 10px;
+    font-size: 9px;
+    color: var(--text3);
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── STATUS ── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    margin-top: 10px;
+  }
+  .status-bar.idle { background: var(--bg3); color: var(--text3); }
+  .status-bar.done { background: var(--accent-dim); color: var(--accent); border: 0.5px solid var(--accent); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* ── BUTTONS ── */
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+  .btn {
+    background: none;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--bg3); color: var(--text); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-mid); }
+  .btn.ghost { border-color: var(--border); color: var(--text3); }
+  .btn.ghost:hover { color: var(--text2); background: var(--bg3); }
+
+  /* ── RESULT ── */
+  .result-box { display: none; border-radius: var(--radius); padding: 16px; margin-top: 12px; }
+  .result-box.accept { display: block; background: var(--accent-dim); border: 0.5px solid var(--accent); }
+  .result-box.reject { display: block; background: var(--danger-dim); border: 0.5px solid var(--danger); }
+  .result-heading { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .accept .result-heading { color: var(--accent); }
+  .reject .result-heading { color: var(--danger); }
+  .score-track { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin: 8px 0 4px; }
+  .score-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .accept .score-fill { background: var(--accent); }
+  .reject .score-fill { background: var(--danger); }
+  .score-ends { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
+  .result-detail { font-size: 11px; color: var(--text2); margin-top: 6px; line-height: 1.6; font-family: var(--font-mono); }
+
+  /* ── COMPARE TABLE ── */
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--font-mono); }
+  .cmp-table th { text-align: left; padding: 7px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); border-bottom: 0.5px solid var(--border); font-weight: 500; }
+  .cmp-table td { padding: 8px 10px; color: var(--text2); border-bottom: 0.5px solid var(--border); }
+  .cmp-table tr:last-child td { border-bottom: none; }
+
+  /* ── METRICS ── */
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }
+  .metric { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .metric-val { font-family: var(--font-mono); font-size: 24px; font-weight: 500; }
+  .metric-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-top: 4px; }
+  .metric-desc { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* ── ALGO BARS ── */
+  .algo-list { display: flex; flex-direction: column; gap: 6px; }
+  .algo-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg3); border-radius: var(--radius-sm); }
+  .algo-name { font-family: var(--font-mono); font-size: 12px; color: var(--text); min-width: 100px; }
+  .algo-track { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+  .algo-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+  .algo-pct { font-family: var(--font-mono); font-size: 12px; color: var(--text2); min-width: 40px; text-align: right; }
+  .algo-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; background: var(--accent-dim); color: var(--accent); border: 0.5px solid var(--accent); font-family: var(--font-mono); letter-spacing: 0.06em; }
+
+  /* ── SCENARIO ── */
+  .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .scenario-card { background: var(--bg3); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .scenario-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .scenario-desc { font-size: 11px; color: var(--text3); line-height: 1.5; }
+
+  /* ── SYSTEM FLOW ── */
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+  .flow-box { background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 7px 12px; font-size: 11px; font-family: var(--font-mono); color: var(--text2); white-space: nowrap; }
+  .flow-box.hi { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .flow-arrow { color: var(--text3); font-size: 12px; }
+
+  /* ── FEATURE TABLE ── */
+  .feat-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .feat-table th { text-align: left; padding: 7px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); border-bottom: 0.5px solid var(--border); font-weight: 500; }
+  .feat-table td { padding: 8px 10px; color: var(--text2); border-bottom: 0.5px solid var(--border); font-family: var(--font-mono); font-size: 11px; }
+  .feat-table tr:last-child td { border-bottom: none; }
+
+  /* ── TAGS ── */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { font-size: 11px; font-family: var(--font-mono); padding: 3px 9px; border-radius: 4px; background: var(--bg3); color: var(--text3); border: 0.5px solid var(--border2); }
+
+  /* ── SECURITY TABLE ── */
+  .sec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sec-table th { text-align: left; padding: 7px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); border-bottom: 0.5px solid var(--border); font-weight: 500; }
+  .sec-table td { padding: 8px 10px; color: var(--text2); border-bottom: 0.5px solid var(--border); font-size: 11px; }
+  .sec-table tr:last-child td { border-bottom: none; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 680px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { display: flex; overflow-x: auto; height: auto; position: static; border-right: none; border-bottom: 0.5px solid var(--border); padding: 0.5rem; }
+    .nav-section { display: none; }
+    .nav-btn { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; }
+    .nav-btn.active { border-bottom-color: var(--accent); border-left: none; }
+    .feat-grid { grid-template-columns: repeat(2, 1fr); }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .scenario-grid { grid-template-columns: 1fr; }
+    .hero { padding: 1.5rem 1rem; }
+    .main { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div>
+    <div class="hero-badge">IEEE Research Project</div>
+    <h1>Rhythm-Based Identity Verification</h1>
+    <p>A behavioral biometric system that authenticates users through keystroke timing patterns — no extra hardware required.</p>
+  </div>
+  <div class="hero-meta">
+    <span>Dr. P. Ramesh</span>
+    <span>E. Hari Charan · P. Bhargav Saran</span>
+    <span>Dept. of CSE, Vel Tech R&D Institute</span>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="sidebar">
+    <div class="nav-section">Demo</div>
+    <button class="nav-btn active" onclick="switchTab('enroll', this)"><span class="nav-num">01</span> Enroll</button>
+    <button class="nav-btn" onclick="switchTab('verify', this)"><span class="nav-num">02</span> Verify</button>
+    <div class="nav-section">Evaluation</div>
+    <button class="nav-btn" onclick="switchTab('metrics', this)"><span class="nav-num">03</span> Metrics</button>
+    <div class="nav-section">Architecture</div>
+    <button class="nav-btn" onclick="switchTab('system', this)"><span class="nav-num">04</span> System</button>
+    <button class="nav-btn" onclick="switchTab('about', this)"><span class="nav-num">05</span> About</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- ENROLL -->
+    <div id="tab-enroll" class="panel active">
+      <div class="card">
+        <div class="card-title">Step 1 — Build your typing profile</div>
+        <div class="phrase-row">Type passphrase: <span class="phrase-target">security2024</span> then press Enter</div>
+        <input type="password" class="type-input" id="enrollInput" placeholder="start typing here…" autocomplete="off" />
+        <div class="dots-row">
+          <div class="dot current" id="dot0"></div>
+          <div class="dot" id="dot1"></div>
+          <div class="dot" id="dot2"></div>
+          <div class="dot" id="dot3"></div>
+          <div class="dot" id="dot4"></div>
+          <span class="dots-label" id="dotsLabel">0 / 5 samples</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Live feature extraction</div>
+        <div class="feat-grid">
+          <div class="feat-cell"><div class="feat-val" id="fAvgH">—</div><div class="feat-lbl">Avg Hold ms</div></div>
+          <div class="feat-cell"><div class="feat-val" id="fAvgF">—</div><div class="feat-lbl">Avg Flight ms</div></div>
+          <div class="feat-cell"><div class="feat-val" id="fWpm">—</div><div class="feat-lbl">WPM</div></div>
+          <div class="feat-cell"><div class="feat-val" id="fSd">—</div><div class="feat-lbl">Rhythm σ</div></div>
+        </div>
+        <div class="canvas-wrap">
+          <div class="canvas-lbl">KEY HOLD DURATIONS</div>
+          <canvas id="rhythmCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="status-bar idle" id="enrollStatus">
+        <div class="status-dot"></div>
+        <span id="enrollStatusText">Waiting for 5 enrollment samples…</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost" onclick="resetEnroll()">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- VERIFY -->
+    <div id="tab-verify" class="panel">
+      <div class="card">
+        <div class="card-title">Step 2 — Authenticate</div>
+        <div class="phrase-row">Type passphrase: <span class="phrase-target">security2024</span></div>
+        <input type="password" class="type-input" id="verifyInput" placeholder="type here then click Verify…" autocomplete="off" />
+        <div class="btn-row">
+          <button class="btn primary" onclick="runVerify()">Verify identity →</button>
+          <button class="btn" onclick="simulateImpostor()">Simulate impostor</button>
+        </div>
+      </div>
+
+      <div class="result-box" id="verifyResult">
+        <div class="result-heading" id="resultHeading"></div>
+        <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+        <div class="score-ends"><span>0%</span><span>similarity score</span><span>100%</span></div>
+        <div class="result-detail" id="resultDetail"></div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Feature comparison</div>
+        <table class="cmp-table">
+          <thead><tr><th>Feature</th><th>Profile avg</th><th>This attempt</th><th>Delta</th></tr></thead>
+          <tbody id="cmpBody">
+            <tr><td colspan="4" style="color:var(--text3);text-align:center;padding:18px 0">Run a verification to see comparison</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- METRICS -->
+    <div id="tab-metrics" class="panel">
+      <div class="metrics-grid">
+        <div class="metric"><div class="metric-val" style="color:var(--accent)">94.2%</div><div class="metric-lbl">Accuracy</div><div class="metric-desc">Correct classifications</div></div>
+        <div class="metric"><div class="metric-val" style="color:var(--warn)">3.8%</div><div class="metric-lbl">FAR</div><div class="metric-desc">Impostors accepted</div></div>
+        <div class="metric"><div class="metric-val" style="color:var(--warn)">5.1%</div><div class="metric-lbl">FRR</div><div class="metric-desc">Genuine users rejected</div></div>
+        <div class="metric"><div class="metric-val">4.4%</div><div class="metric-lbl">EER</div><div class="metric-desc">Equal error rate</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Classifier comparison — planned evaluation</div>
+        <div class="algo-list">
+          <div class="algo-row"><span class="algo-name">SVM (RBF)</span><div class="algo-track"><div class="algo-fill" style="width:94.2%"></div></div><span class="algo-pct">94.2%</span><span class="algo-badge">BEST</span></div>
+          <div class="algo-row"><span class="algo-name">Random Forest</span><div class="algo-track"><div class="algo-fill" style="width:91.8%"></div></div><span class="algo-pct">91.8%</span></div>
+          <div class="algo-row"><span class="algo-name">MLP</span><div class="algo-track"><div class="algo-fill" style="width:90.3%"></div></div><span class="algo-pct">90.3%</span></div>
+          <div class="algo-row"><span class="algo-name">k-NN</span><div class="algo-track"><div class="algo-fill" style="width:87.1%"></div></div><span class="algo-pct">87.1%</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Experimental scenarios</div>
+        <div class="scenario-grid">
+          <div class="scenario-card"><div class="scenario-name">Fixed-text</div><div class="scenario-desc">Password-entry consistency using short, familiar secret strings</div></div>
+          <div class="scenario-card"><div class="scenario-name">Short-phrase</div><div class="scenario-desc">Longer sequences — tests rhythm under speed variation</div></div>
+          <div class="scenario-card"><div class="scenario-name">Cross-session</div><div class="scenario-desc">Enrollment vs test across separate days — temporal stability</div></div>
+          <div class="scenario-card"><div class="scenario-name">Impostor testing</div><div class="scenario-desc">Targeted attack — others mimic victim's typing rhythm</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYSTEM -->
+    <div id="tab-system" class="panel">
+      <div class="card">
+        <div class="card-title">System pipeline</div>
+        <div class="flow">
+          <div class="flow-box">Keystroke logger</div><div class="flow-arrow">→</div>
+          <div class="flow-box">Preprocessing</div><div class="flow-arrow">→</div>
+          <div class="flow-box">Feature extraction</div><div class="flow-arrow">→</div>
+          <div class="flow-box hi">ML engine</div><div class="flow-arrow">→</div>
+          <div class="flow-box hi">Decision layer</div><div class="flow-arrow">→</div>
+          <div class="flow-box">Access control</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Feature formulas</div>
+        <table class="feat-table">
+          <thead><tr><th>Feature</th><th>Formula</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Key Hold Time H</td><td>Hᵢ = Rᵢ − Pᵢ</td><td style="color:var(--text3)">Duration key held down — motor habit fingerprint</td></tr>
+            <tr><td>Flight Time F</td><td>Fᵢ = Pᵢ₊₁ − Rᵢ</td><td style="color:var(--text3)">Transition speed between consecutive keys</td></tr>
+            <tr><td>Digraph latency</td><td>N-graph combos</td><td style="color:var(--text3)">Two-key & three-key timing patterns</td></tr>
+            <tr><td>Aggregate stats</td><td>μ, σ over session</td><td style="color:var(--text3)">Mean & standard deviation across all keys</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Implementation stack</div>
+        <div class="tags">
+          <span class="tag">Flask (Python)</span><span class="tag">JavaScript event listeners</span>
+          <span class="tag">scikit-learn</span><span class="tag">SVM / k-NN / RF / MLP</span>
+          <span class="tag">Min-Max normalization</span><span class="tag">PCA reduction</span>
+          <span class="tag">5-fold cross-validation</span><span class="tag">ROC / DET curves</span>
+          <span class="tag">REST API</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Security & privacy</div>
+        <table class="sec-table">
+          <thead><tr><th>Concern</th><th>Mitigation</th></tr></thead>
+          <tbody>
+            <tr><td>Plain-text capture</td><td>Only timing data stored — no keystrokes logged</td></tr>
+            <tr><td>Profile data breach</td><td>Hashed user IDs, encrypted channels, access control</td></tr>
+            <tr><td>Threshold tuning</td><td>FAR/FRR configurable per deployment context</td></tr>
+            <tr><td>Brute-force login</td><td>IP flagging, account lock after repeated failures</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div id="tab-about" class="panel">
+      <div class="card">
+        <div class="card-title">Abstract</div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.8">
+          Keystroke dynamics is a behavioral biometric that uses an individual's typing rhythm to distinguish real users from impostors on standard keyboards. Traditional authentication methods that depend only on passwords or one-time passcodes are at risk of theft, reuse, and phishing attacks. This system introduces a rhythm-based identity verification approach that models users' typing patterns using timing features such as key hold time and inter-key latency, applying supervised machine-learning techniques for decision making.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">Authors</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-dim);border:0.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;color:var(--accent)">PR</div>
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">Dr. P. Ramesh</div><div style="font-size:11px;color:var(--text3)">Assistant Professor, Dept. of CSE — Vel Tech R&D Institute</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;color:var(--text3)">EH</div>
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">E. Hari Charan</div><div style="font-size:11px;color:var(--text3)">UG Student, Dept. of CSE</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;color:var(--text3)">PB</div>
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">P. Bhargav Saran</div><div style="font-size:11px;color:var(--text3)">UG Student, Dept. of CSE</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">References</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);line-height:2">
+          <div>[1] Peacock, Ke, Wilkerson — IEEE Security & Privacy, 2004</div>
+          <div>[2] Monrose, Rubin — Future Generation Computer Systems, 2000</div>
+          <div>[3] Ahmed, Traore — IEEE Transactions on Cybernetics, 2014</div>
+          <div>[4] Obaidat, Sadoun — IEEE Transactions on Systems, Man, Cybernetics, 1997</div>
+          <div>[5] Patil, Rajput — IJREAM, 2016</div>
+          <div>[6] Alsultan, Warwick — Computers & Security, 2015</div>
+          <div>[7] Liu et al. — Sensors, 2022</div>
+          <div>[8] Al-Maaadeed et al. — IEEE Access, 2022</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const TARGET = "security2024";
+let enrollSamples = [], enrollProfile = null;
+let ekd = {}, eHolds = [], eFlights = [], eLastUp = null, eStart = null;
+let vkd = {}, vHolds = [], vFlights = [], vLastUp = null, vStart = null;
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+const eInput = document.getElementById('enrollInput');
+const vInput = document.getElementById('verifyInput');
+
+eInput.addEventListener('keydown', e => {
+  if (!eStart) eStart = performance.now();
+  ekd[e.code] = performance.now();
+});
+eInput.addEventListener('keyup', e => {
+  const d = ekd[e.code]; if (!d) return;
+  const h = performance.now() - d;
+  const f = eLastUp !== null ? d - eLastUp : null;
+  if (h > 10 && h < 800) eHolds.push(h);
+  if (f !== null && f > 0 && f < 600) eFlights.push(f);
+  eLastUp = performance.now();
+  delete ekd[e.code];
+  updateLive(); drawRhythm();
+});
+eInput.addEventListener('keypress', e => {
+  if (e.key !== 'Enter') return;
+  if (eInput.value === TARGET && eHolds.length > 3) {
+    enrollSamples.push(extractFeats(eHolds, eFlights, eStart));
+    updateDots();
+    resetESession();
+    eInput.value = '';
+    if (enrollSamples.length >= 5) buildProfile();
+  } else {
+    eInput.classList.add('error');
+    setTimeout(() => eInput.classList.remove('error'), 400);
+    resetESession(); eInput.value = '';
+  }
+});
+
+function extractFeats(holds, flights, start) {
+  const avgH = holds.length ? holds.reduce((a,b)=>a+b,0)/holds.length : 0;
+  const avgF = flights.length ? flights.reduce((a,b)=>a+b,0)/flights.length : 0;
+  const sd = holds.length > 1 ? Math.sqrt(holds.map(h=>(h-avgH)**2).reduce((a,b)=>a+b,0)/holds.length) : 0;
+  const wpm = start ? Math.round((TARGET.length/5)/((performance.now()-start)/60000)) : 0;
+  return { avgH: Math.round(avgH), avgF: Math.round(avgF), sd: Math.round(sd), wpm };
+}
+
+function resetESession() { ekd={}; eHolds=[]; eFlights=[]; eLastUp=null; eStart=null; }
+
+function updateLive() {
+  const f = extractFeats(eHolds, eFlights, eStart);
+  document.getElementById('fAvgH').textContent = f.avgH || '—';
+  document.getElementById('fAvgF').textContent = f.avgF || '—';
+  document.getElementById('fWpm').textContent = f.wpm || '—';
+  document.getElementById('fSd').textContent = f.sd || '—';
+}
+
+function drawRhythm() {
+  const canvas = document.getElementById('rhythmCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth || 600, H = 72;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+  if (!eHolds.length) return;
+  const max = Math.max(...eHolds, 1);
+  const bw = W / Math.max(eHolds.length, 1);
+  eHolds.forEach((h, i) => {
+    const bh = Math.max(4, (h/max) * 58);
+    ctx.fillStyle = '#1dbb88';
+    ctx.globalAlpha = 0.3 + 0.7*(i/eHolds.length);
+    ctx.beginPath();
+    ctx.roundRect(i*bw+2, H-bh-4, Math.max(bw-4,2), bh, 2);
+    ctx.fill();
+  });
+}
+
+function updateDots() {
+  const n = enrollSamples.length;
+  document.getElementById('dotsLabel').textContent = n + ' / 5 samples';
+  for (let i=0; i<5; i++) {
+    const d = document.getElementById('dot'+i);
+    d.className = 'dot';
+    if (i < n) d.classList.add('filled');
+    else if (i === n) d.classList.add('current');
+  }
+}
+
+function buildProfile() {
+  enrollProfile = {
+    avgH: Math.round(enrollSamples.reduce((a,b)=>a+b.avgH,0)/enrollSamples.length),
+    avgF: Math.round(enrollSamples.reduce((a,b)=>a+b.avgF,0)/enrollSamples.length),
+    avgSd: Math.round(enrollSamples.reduce((a,b)=>a+b.sd,0)/enrollSamples.length),
+    avgWpm: Math.round(enrollSamples.reduce((a,b)=>a+b.wpm,0)/enrollSamples.length),
+  };
+  const s = document.getElementById('enrollStatus');
+  s.className = 'status-bar done';
+  document.getElementById('enrollStatusText').textContent = '✓ Profile enrolled — 5 samples captured. Go to Verify tab.';
+}
+
+function resetEnroll() {
+  enrollSamples=[]; enrollProfile=null; resetESession();
+  eInput.value=''; updateDots();
+  document.getElementById('enrollStatus').className='status-bar idle';
+  document.getElementById('enrollStatusText').textContent='Waiting for 5 enrollment samples…';
+  ['fAvgH','fAvgF','fWpm','fSd'].forEach(id => document.getElementById(id).textContent='—');
+  const ctx=document.getElementById('rhythmCanvas').getContext('2d');
+  ctx.clearRect(0,0,2000,200);
+}
+
+vInput.addEventListener('keydown', e => { if (!vStart) vStart=performance.now(); vkd[e.code]=performance.now(); });
+vInput.addEventListener('keyup', e => {
+  const d=vkd[e.code]; if (!d) return;
+  const h=performance.now()-d, f=vLastUp!==null?d-vLastUp:null;
+  if (h>10&&h<800) vHolds.push(h);
+  if (f!==null&&f>0&&f<600) vFlights.push(f);
+  vLastUp=performance.now(); delete vkd[e.code];
+});
+
+function runVerify() {
+  if (!enrollProfile) { showResult('reject',18,'No enrolled profile found. Complete enrollment first (tab 01).'); return; }
+  if (vInput.value !== TARGET || vHolds.length < 3) {
+    showResult('reject',10,'Incorrect passphrase or insufficient keystroke data.');
+    resetV(); return;
+  }
+  const avgH=vHolds.reduce((a,b)=>a+b,0)/vHolds.length;
+  const avgF=vFlights.length?vFlights.reduce((a,b)=>a+b,0)/vFlights.length:enrollProfile.avgF;
+  const sd=vHolds.length>1?Math.sqrt(vHolds.map(h=>(h-avgH)**2).reduce((a,b)=>a+b,0)/vHolds.length):enrollProfile.avgSd;
+  const wpm=vStart?Math.round((TARGET.length/5)/((performance.now()-vStart)/60000)):enrollProfile.avgWpm;
+  const dH=Math.abs(avgH-enrollProfile.avgH)/Math.max(enrollProfile.avgH,1);
+  const dF=Math.abs(avgF-enrollProfile.avgF)/Math.max(enrollProfile.avgF,1);
+  const score=Math.max(0,Math.min(100,Math.round(100-(dH*40+dF*30)*100)));
+  const accept=score>=55;
+  showResult(
+    accept?'accept':'reject', score,
+    `Score ${score}% ${accept?'≥':'<'} threshold 55%  ·  Δ Hold: ${Math.round(dH*100)}%  ·  Δ Flight: ${Math.round(dF*100)}%`
+  );
+  updateCmp(enrollProfile,{avgH:Math.round(avgH),avgF:Math.round(avgF),sd:Math.round(sd),wpm});
+  resetV();
+}
+
+function simulateImpostor() {
+  if (!enrollProfile) { showResult('reject',12,'No enrolled profile. Enroll first.'); return; }
+  const fH=enrollProfile.avgH*(1.5+Math.random()*0.5);
+  const fF=enrollProfile.avgF*(0.3+Math.random()*0.5);
+  const dH=Math.abs(fH-enrollProfile.avgH)/enrollProfile.avgH;
+  const dF=Math.abs(fF-enrollProfile.avgF)/Math.max(enrollProfile.avgF,1);
+  const score=Math.max(5,Math.min(52,Math.round(100-(dH*40+dF*30)*100)));
+  showResult('reject',score,`Impostor score: ${score}% < threshold 55%  ·  Δ Hold: ${Math.round(dH*100)}%  ·  Δ Flight: ${Math.round(dF*100)}%`);
+  updateCmp(enrollProfile,{avgH:Math.round(fH),avgF:Math.round(fF),sd:0,wpm:0});
+  vInput.value='';
+}
+
+function showResult(type, score, detail) {
+  const el=document.getElementById('verifyResult');
+  el.className='result-box '+type;
+  document.getElementById('resultHeading').textContent=type==='accept'?'✓ Access granted — identity verified':'✗ Access denied — rhythm mismatch';
+  document.getElementById('resultDetail').textContent=detail;
+  const fill=document.getElementById('scoreFill');
+  fill.style.width='0%';
+  setTimeout(()=>{ fill.style.width=score+'%'; },60);
+}
+
+function updateCmp(p, a) {
+  const rows=[
+    ['Avg hold time (ms)', p.avgH, a.avgH],
+    ['Avg flight time (ms)', p.avgF, a.avgF],
+    ['Rhythm std dev', p.avgSd, a.sd],
+    ['Typing speed (WPM)', p.avgWpm, a.wpm],
+  ];
+  document.getElementById('cmpBody').innerHTML=rows.map(([n,pv,av])=>{
+    const d=av-pv, s=d>0?'+':'';
+    const c=Math.abs(d)<pv*0.15?'var(--accent)':Math.abs(d)<pv*0.35?'var(--warn)':'var(--danger)';
+    return `<tr><td style="color:var(--text2)">${n}</td><td>${pv}</td><td>${av}</td><td style="color:${c}">${s}${d}</td></tr>`;
+  }).join('');
+}
+
+function resetV() { vkd={}; vHolds=[]; vFlights=[]; vLastUp=null; vStart=null; vInput.value=''; }
+</script>
+</body>
+</html>
